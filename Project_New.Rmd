@@ -1,0 +1,205 @@
+```{r}
+library(ggplot2)
+library(carData)
+library(car)
+library(readxl)
+library(dplyr)
+library(tidyr)
+player_data <- read_excel("C:/Users/mikes/Downloads/final_dataset.xlsx")
+```
+
+```{r}
+names(player_data) <- gsub(" ", "", names(player_data))
+```
+
+
+```{r}
+#Time Decay Weighted Average
+# Weights for the time decay calculation
+weights <- c(0.5, 0.25, 0.15, 0.1)
+
+# Function to calculate weighted averages
+calculate_weighted_average <- function(...){
+  values <- c(...)
+  non_na_values <- !is.na(values)
+  if (all(is.na(values))){ 
+    return(NA)  # Return NA if all values are NA
+  }
+  
+  adjusted_weights <- weights[non_na_values]
+  adjusted_values <- values[non_na_values]
+  
+  # Calculate the weighted sum and adjust the denominator based on the available weights
+  weighted_values <- adjusted_values * adjusted_weights
+  return(sum(weighted_values) / sum(adjusted_weights))
+}
+```
+
+
+
+```{r}
+for (stat in c("MP", "Starts", "Min", "TotalMins/90", "Gls", "Ast", 
+  "Non-PenaltyGoals", "PenaltiesScored", "PenaltiesAttempted", "YellowCards", 
+  "RedCards", "Gls/90", "Ast/90", "GandA/90", "Non-PenaltyGoals/90", 
+  "GlsandAst-ScoredPenalties/90", "xG", "Non-PenaltyxG", "xA", 
+  "Non-penaltyxGandxA", "xG/90", "xA/90", "xGandxA/90", "Non-PenaltyxG/90", 
+  "Non-PenaltyxGandxA/90", "TotalShots", "TotalShotsonTarget", 
+  "ShotsonTarget%", "Shots/90", "ShotsonTarget/90", "Goals/Shots", 
+  "Goals/ShotsonTarget", "AvgShotDistance-yds", "FreekickShots", 
+  "Non-PenaltyxG/Shots", "GoalsScoredminusxG", 
+  "Non-PenaltyGoalsScoredminusNon-PenaltyxG", "Shot-CreatingActions", 
+  "Shot-CreatingActions/90", "PassesLeadingtoShotAttempt", 
+  "Set-PieceLeadingtoShotAttempt", "DribblesLeadingtoShotAttempt", 
+  "ShotsLeadingtoShotAttempt", "FoulsDrawnLeadingtoShotAttempt", 
+  "DefensiveActionsLeadingtoShotAttempt", "GoalCreatingActions", 
+  "GoalCreatingActions/90", "PassesLeadingtoGoals", 
+  "Set-PieceLeadingtoGoals", "DribblesLeadingtoGoals", 
+  "ShotsLeadingtoGoals", "FoulsDrawnLeadingtoGoals", 
+  "DefensiveActionsLeadingtoGoals", "Touches", 
+  "TouchesinDefensivePenaltyBox", "TouchesinDefensive3rd", 
+  "TouchesinMidfield3rd", "TouchesinAttacking3rd", 
+  "TouchesinAttackingPenaltyBox", "TouchesinOpen-play", 
+  "TotalSuccessfulDribbles", "TotalAttemptedDribbles", 
+  "DribbleSuccess%", "Totalno.ofPlayersDribblesPast", 
+  "TotalNutmegs", "TotalCarries", "TotalDistanceCarriedtheBall", 
+  "TotalDistanceCarriedtheBallinForwardDirection", 
+  "TotalCarriesinForwardDirection", "CarriesintoFinalThird", 
+  "CarriesintoAttackingPenaltyBox", "TotalFailedAttemptsatControllingBall", 
+  "NumberofTimesTackledwhenDribbling", 
+  "NumberofTimesPlayerwasPassTarget", "NumberofTimesReceivedPass", 
+  "%ofTimesSuccessfullyReceivedPass", "ProgressivePassesReceived", 
+  "PassesCompleted-Allpass-types", "PassesAttempted-Allpass-types", 
+  "PassCompletion%-Allpass-types", "TotalDistanceofCompletedPasses-AllPass-types", 
+  "TotalDistanceofCompletedProgressivePasses-AllPass-types", 
+  "PassesCompleted-ShortPasses", "PassesAttempted-ShortPasses", 
+  "PassCompletion%-ShortPasses", "PassesCompleted-MediumPasses", 
+  "PassesAttempted-MediumPasses", "PassCompletion%-MediumPasses", 
+  "PassesCompleted-LongPasses", "PassesAttempted-LongPasses", 
+  "PassCompletion%-LongPasses", "TotalAssists", "xGAssisted", 
+  "AssistminusxGAssisted", "CompletedpassesthatenterFinal3rd", 
+  "CompletedpassesthatenterPenaltyBox", 
+  "CompletedCrossesthatenterPenaltyBox", "TotalCompletedProgressivePasses", 
+  "TotalNumberofPlayersTackled", "TotalTacklesWon", 
+  "TacklesinDefensive3rd", "TacklesinMidfield3rd", "TacklesinAttacking3rd", 
+  "NumberofDribblersTackled", "TimesDribbledPastandTotalTackles", 
+  "%ofDribblersTackled", "NumberofTimesDribbledPast", 
+  "NumberofPressingActions", "TimesSquadgainedPossessionwithin5secondsofPressingActions", 
+  "SuccessfulPressure%", "NumberofPressesinDefensiveThird", 
+  "NumberofPressesinMidfieldThird", "NumberofPressesinAttackingThird", 
+  "TotalDefensiveBlocks", "TotalShotsBlocked", "GoalSavingBlocks", 
+  "TimesblockedaPass", "TotalInterceptions", 
+  "TotalPlayersTackledandTotalInterceptions", "TotalClearances", 
+  "MistakesleadingtoOpponentShots", "2ndYellowCards", "FoulsCommitted", 
+  "FoulsDrawn", "Offsides", "Crosses", "Interceptions", 
+  "PenaltyKicksWon", "PenaltiesConceded", "OwnGoals", 
+  "TotalLooseBallsRecovered", "AerialDuelWon", "AerialDuelLost", 
+  "%AerialDuelsWon")) {  # List of stats to calculate
+  # Create a new column for weighted average
+  
+  stat_columns <- grep(paste0("^", stat, "\\("), names(player_data), value = TRUE)
+  player_data[[paste0(stat, "_Weighted_Avg")]] <- apply(
+    player_data[, stat_columns], 
+    1, 
+    calculate_weighted_average
+  )
+}
+```
+
+
+```{r}
+player_data <- player_data %>%
+  mutate(`ShotsonTarget%_Weighted_Avg` = ifelse(is.na(`ShotsonTarget%_Weighted_Avg`), 0, `ShotsonTarget%_Weighted_Avg`)) %>%
+  mutate(`Goals/Shots_Weighted_Avg` = ifelse(is.na(`Goals/Shots_Weighted_Avg`), 0, `Goals/Shots_Weighted_Avg`)) %>%
+  mutate(`Goals/ShotsonTarget_Weighted_Avg` = ifelse(is.na(`Goals/ShotsonTarget_Weighted_Avg`), 0, `Goals/ShotsonTarget_Weighted_Avg`)) %>%
+  mutate(`AvgShotDistance-yds_Weighted_Avg` = ifelse(is.na(`AvgShotDistance-yds_Weighted_Avg`), 0, `AvgShotDistance-yds_Weighted_Avg`)) %>%
+  mutate(`Non-PenaltyxG/Shots_Weighted_Avg` = ifelse(is.na(`Non-PenaltyxG/Shots_Weighted_Avg`), 0, `Non-PenaltyxG/Shots_Weighted_Avg`)) %>%
+  mutate(`DribbleSuccess%_Weighted_Avg` = ifelse(is.na(`DribbleSuccess%_Weighted_Avg`), 0, `DribbleSuccess%_Weighted_Avg`)) %>%
+  mutate(`%ofTimesSuccessfullyReceivedPass_Weighted_Avg` = ifelse(is.na(`%ofTimesSuccessfullyReceivedPass_Weighted_Avg`), 0, `%ofTimesSuccessfullyReceivedPass_Weighted_Avg`)) %>%
+  mutate(`PassCompletion%-Allpass-types_Weighted_Avg` = ifelse(is.na(`PassCompletion%-Allpass-types_Weighted_Avg`), 0, `PassCompletion%-Allpass-types_Weighted_Avg`)) %>%
+  mutate(`PassCompletion%-ShortPasses_Weighted_Avg` = ifelse(is.na(`PassCompletion%-ShortPasses_Weighted_Avg`), 0, `PassCompletion%-ShortPasses_Weighted_Avg`)) %>%
+  mutate(`PassCompletion%-MediumPasses_Weighted_Avg` = ifelse(is.na(`PassCompletion%-MediumPasses_Weighted_Avg`), 0, `PassCompletion%-MediumPasses_Weighted_Avg`)) %>%
+  mutate(`PassCompletion%-LongPasses_Weighted_Avg` = ifelse(is.na(`PassCompletion%-LongPasses_Weighted_Avg`), 0, `PassCompletion%-LongPasses_Weighted_Avg`)) %>%
+  mutate(`%ofDribblersTackled_Weighted_Avg` = ifelse(is.na(`%ofDribblersTackled_Weighted_Avg`), 0, `%ofDribblersTackled_Weighted_Avg`)) %>%
+  mutate(`2ndYellowCards_Weighted_Avg` = ifelse(is.na(`2ndYellowCards_Weighted_Avg`), 0, `2ndYellowCards_Weighted_Avg`)) %>%
+  mutate(`Offsides_Weighted_Avg` = ifelse(is.na(`Offsides_Weighted_Avg`), 0, `Offsides_Weighted_Avg`)) %>%
+  mutate(`SuccessfulPressure%_Weighted_Avg` = ifelse(is.na(`SuccessfulPressure%_Weighted_Avg`), 0, `SuccessfulPressure%_Weighted_Avg`)) %>%
+  mutate(`OwnGoals_Weighted_Avg` = ifelse(is.na(`OwnGoals_Weighted_Avg`), 0, `OwnGoals_Weighted_Avg`)) %>%
+  mutate(`%AerialDuelsWon_Weighted_Avg` = ifelse(is.na(`%AerialDuelsWon_Weighted_Avg`), 0, `%AerialDuelsWon_Weighted_Avg`)) 
+
+player_data <- player_data %>%
+  mutate(ContractYearsLeft = ifelse(ContractYearsLeft == "fail", 0, ContractYearsLeft)) %>%
+  mutate(ContractYearsLeft = as.integer(ContractYearsLeft))
+
+player_data <- player_data %>%
+  group_by(Player, 'Squad(20/21)') %>%                       
+  arrange(desc(Age), 'Contract Years Left') %>%        
+  slice(1) %>%                                     
+  ungroup()            
+
+
+cleaned_player_data <- player_data[, c(1:8, 549:ncol(player_data))]
+
+write.csv(cleaned_player_data, "C:/Users/mikes/Downloads/cleaned_player_data.csv", row.names = FALSE)
+```
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+try <- subset(player_data, Player == 'Erling Haaland')
+
+for (stat in c(`PassesCompleted(Allpass-types)`)) {
+  try[[paste0(stat, "_Weighted_Avg")]] <- apply(
+    try[, grep(stat, names(try))], 
+    1, 
+    calculate_weighted_average
+  )
+}
+
+selected_columns <- grep(stat, names(try), value = TRUE)
+print(selected_columns)
+
+# Inspect the values of those columns
+values_to_average <- try[, selected_columns]
+print(values_to_average)
+
+# Check the structure and types
+print(str(values_to_average))
+
+# Manually compute the weighted average to see the result
+manual_result <- calculate_weighted_average(as.numeric(values_to_average))
+print(manual_result)
+
+for (i in 549:ncol(player_data)) {
+  column_name <- colnames(player_data)[i]  # Get the column name
+  num_nulls <- sum(is.na(player_data[, i]))  # Count NA values in the ith column
+  if (num_nulls > 0 ){
+    cat(column_name, "", num_nulls, "\n")
+  }
+}
